@@ -65,5 +65,5 @@ Dataset : https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset#
 ## 1️⃣ Clone โปรเจคจาก GitHub
 
 ```bash
-git clone https://github.com/yourusername/ai-age-detector.git
+git clone https://github.com/6604062630561/ai-age-detector.git
 
