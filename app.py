@@ -6,117 +6,102 @@ from tensorflow.keras.models import load_model
 from PIL import Image
 import mediapipe as mp
 
-# ----------------------------
+# =========================================================
 # PAGE CONFIG
-# ----------------------------
+# =========================================================
 
 st.set_page_config(
-    page_title="AI Age Detector",
+    page_title="AI Face Age Detector",
     page_icon="🧠",
     layout="wide"
 )
 
-# ----------------------------
-# STYLE
-# ----------------------------
+# =========================================================
+# MENU NAVIGATION
+# =========================================================
+
+page = st.radio(
+    "",
+    ["🧠 Face Age Detection", "📚 AI Model Explanation"],
+    horizontal=True
+)
+
+# =========================================================
+# STYLE + ANIMATION
+# =========================================================
 
 st.markdown("""
 <style>
-
 [data-testid="stAppViewContainer"]{
-background: linear-gradient(135deg,#141e30,#243b55);
-color:#ffffff;
+background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
 font-family:'Segoe UI',sans-serif;
+animation: fadeIn 1s ease;
 }
-
+@keyframes fadeIn{
+0%{opacity:0}
+100%{opacity:1}
+}
 .big-title{
-font-size:64px;
+font-size:70px;
 text-align:center;
 font-weight:800;
 color:white;
-text-shadow:0px 0px 25px rgba(0,150,255,0.9);
+text-shadow:0 0 25px #00c6ff;
 }
-
 .subtitle{
 text-align:center;
 font-size:22px;
-color:#cfd9df;
+color:#d9f1ff;
 margin-bottom:30px;
 }
-
-.card{
-background: rgba(255,255,255,0.07);
-padding:25px;
-border-radius:20px;
-backdrop-filter: blur(12px);
-box-shadow:0px 0px 25px rgba(0,0,0,0.6);
-}
-
-.age-box{
-background: linear-gradient(135deg,#00c6ff,#0072ff);
+.result-card{
+background:linear-gradient(135deg,#00c6ff,#0072ff);
 padding:40px;
 border-radius:25px;
 text-align:center;
 color:white;
-box-shadow:0px 0px 40px rgba(0,200,255,0.8);
-margin-bottom:20px;
+box-shadow:0 0 40px rgba(0,200,255,0.8);
+animation:pop 0.6s ease;
 }
-
+@keyframes pop{
+0%{transform:scale(0.85)}
+100%{transform:scale(1)}
+}
 .age-number{
-font-size:85px;
+font-size:90px;
 font-weight:800;
 }
-
-.age-label{
-font-size:24px;
-color:#eaf6ff;
+.metric-box{
+background:rgba(255,255,255,0.06);
+padding:20px;
+border-radius:15px;
+margin-top:15px;
 }
-
-/* FIX AI CONFIDENCE COLOR */
-
 [data-testid="stMetricValue"]{
 color:#00e5ff !important;
-font-size:34px;
+font-size:32px;
 font-weight:bold;
 }
-
 [data-testid="stMetricLabel"]{
-color:#ffffff !important;
+color:white !important;
 font-size:18px;
 }
-
-[data-testid="stSidebar"]{
-background: linear-gradient(180deg,#0f2027,#203a43);
-}
-
 .stProgress > div > div > div > div{
-background-image: linear-gradient(90deg,#00c6ff,#0072ff);
+background-image:linear-gradient(90deg,#00c6ff,#0072ff);
 }
-
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
-# HEADER
-# ----------------------------
-
-st.markdown('<p class="big-title">🧠 AI AGE DETECTOR</p>', unsafe_allow_html=True)
-
-st.markdown(
-'<p class="subtitle">Deep Learning Age Prediction System</p>',
-unsafe_allow_html=True
-)
-
-# ----------------------------
+# =========================================================
 # LOAD MODEL
-# ----------------------------
+# =========================================================
 
 @st.cache_resource
 def load_ai():
     return load_model("best_age_model.h5")
 
-with st.spinner("Loading AI Model..."):
-    model = load_ai()
+model = load_ai()
 
 classes = [
 "Middle Age (21-50)",
@@ -126,179 +111,218 @@ classes = [
 
 age_values = [35,65,10]
 
-# ----------------------------
-# MEDIAPIPE FACE DETECTION
-# ----------------------------
+# =========================================================
+# FACE DETECTOR (High Accuracy)
+# =========================================================
 
 mp_face = mp.solutions.face_detection
 
 detector = mp_face.FaceDetection(
 model_selection=1,
-min_detection_confidence=0.6
+min_detection_confidence=0.8
 )
 
-# ----------------------------
-# SIDEBAR
-# ----------------------------
+# =========================================================
+# PAGE 1 : AGE DETECTOR
+# =========================================================
 
-st.sidebar.title("⚙️ System Info")
+if page == "🧠 Face Age Detection":
 
-st.sidebar.success("AI Model Loaded")
+    st.markdown('<p class="big-title">AI FACE AGE DETECTOR</p>', unsafe_allow_html=True)
 
-st.sidebar.write("Age Classes")
+    st.markdown(
+    '<p class="subtitle">Deep Learning System for Predicting Age from Facial Images</p>',
+    unsafe_allow_html=True
+    )
 
-st.sidebar.write(classes)
+    uploaded_file = st.file_uploader(
+        "Upload a face image",
+        type=["jpg","jpeg","png"]
+    )
 
-# ----------------------------
-# UPLOAD IMAGE
-# ----------------------------
+    if uploaded_file:
 
-uploaded_file = st.file_uploader(
-"Upload face image",
-type=["jpg","jpeg","png"]
-)
+        col1,col2 = st.columns(2)
 
-# ----------------------------
-# MAIN PROCESS
-# ----------------------------
+        image = Image.open(uploaded_file)
+        img = np.array(image)
 
-if uploaded_file:
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    col1,col2 = st.columns(2)
+        results = detector.process(img_rgb)
 
-    image = Image.open(uploaded_file)
+        if not results.detections:
 
-    img = np.array(image)
+            st.warning("No face detected")
 
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
 
-    results = detector.process(img_rgb)
+            h,w,_ = img.shape
 
-    if not results.detections:
+            st.success(f"Detected {len(results.detections)} face(s)")
 
-        st.warning("No face detected")
+            for detection in results.detections:
 
-    else:
+                bbox = detection.location_data.relative_bounding_box
 
-        h,w,_ = img.shape
+                x = int(bbox.xmin * w)
+                y = int(bbox.ymin * h)
+                bw = int(bbox.width * w)
+                bh = int(bbox.height * h)
 
-        st.success(f"Detected {len(results.detections)} face(s)")
+                margin = 30
 
-        for detection in results.detections:
+                x = max(0,x-margin)
+                y = max(0,y-margin)
+                bw = min(w-x,bw+margin*2)
+                bh = min(h-y,bh+margin*2)
 
-            bbox = detection.location_data.relative_bounding_box
+                cv2.rectangle(img,(x,y),(x+bw,y+bh),(0,255,0),3)
 
-            x = int(bbox.xmin * w)
-            y = int(bbox.ymin * h)
-            bw = int(bbox.width * w)
-            bh = int(bbox.height * h)
+                face = img[y:y+bh, x:x+bw]
 
-            cv2.rectangle(img,(x,y),(x+bw,y+bh),(0,255,0),3)
+                # --------------------------------
+                # IMAGE PREPROCESSING
+                # --------------------------------
 
-            face = img[y:y+bh, x:x+bw]
+                face = cv2.GaussianBlur(face,(3,3),0)
 
-            face = cv2.resize(face,(128,128))
+                lab = cv2.cvtColor(face, cv2.COLOR_BGR2LAB)
+                l,a,b = cv2.split(lab)
 
-            face = face / 255.0
+                clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
+                cl = clahe.apply(l)
 
-            face = np.reshape(face,(1,128,128,3))
+                limg = cv2.merge((cl,a,b))
+                face = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
-            prediction = model.predict(face)
+                face = cv2.resize(face,(128,128))
 
-            predicted_class = classes[np.argmax(prediction)]
+                face = face / 255.0
 
-            confidence = np.max(prediction) * 100
+                face = np.reshape(face,(1,128,128,3))
 
-            estimated_age = int(
-                prediction[0][0]*age_values[0] +
-                prediction[0][1]*age_values[1] +
-                prediction[0][2]*age_values[2]
-            )
+                # --------------------------------
+                # PREDICT
+                # --------------------------------
 
-            # IMAGE DISPLAY
+                prediction = model.predict(face,verbose=0)
 
-            with col1:
+                predicted_class = classes[np.argmax(prediction)]
 
-                st.image(img,caption="Detected Face",use_column_width=True)
+                confidence = float(np.max(prediction))*100
 
-            # RESULT PANEL
+                estimated_age = int(
+                    prediction[0][0]*age_values[0] +
+                    prediction[0][1]*age_values[1] +
+                    prediction[0][2]*age_values[2]
+                )
 
-            with col2:
+                # --------------------------------
+                # DISPLAY
+                # --------------------------------
 
-                st.markdown("### 🤖 AI Prediction")
+                with col1:
 
-                st.markdown(f"""
-                <div class="age-box">
-                <div class="age-label">Estimated Age</div>
-                <div class="age-number">{estimated_age}</div>
-                <div class="age-label">Years Old</div>
-                </div>
-                """, unsafe_allow_html=True)
+                    st.image(img,caption="Detected Face",use_column_width=True)
 
-                st.write(f"**Age Group:** {predicted_class}")
+                with col2:
 
-                st.metric("AI Confidence", f"{confidence:.2f}%")
+                    st.markdown(f"""
+                    <div class="result-card">
+                    <div>Estimated Age</div>
+                    <div class="age-number">{estimated_age}</div>
+                    <div>Years Old</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                st.progress(int(confidence))
+                    st.metric("Age Group",predicted_class)
 
-                fig = plt.figure()
+                    st.metric("AI Confidence",f"{confidence:.2f}%")
 
-                bars = plt.bar(classes,prediction[0])
+                    st.progress(int(confidence))
 
-                for bar in bars:
-                    bar.set_color("#00c6ff")
+                    fig = plt.figure()
 
-                plt.title("AI Prediction Probability",color="white")
-                plt.ylabel("Confidence",color="white")
-                plt.xticks(color="white")
-                plt.yticks(color="white")
+                    bars = plt.bar(classes,prediction[0])
 
-                fig.patch.set_alpha(0)
+                    for bar in bars:
+                        bar.set_color("#00c6ff")
 
-                st.pyplot(fig)
+                    plt.title("Prediction Probability",color="white")
+                    plt.xticks(color="white")
+                    plt.yticks(color="white")
 
-# ----------------------------
-# ABOUT
-# ----------------------------
+                    fig.patch.set_alpha(0)
 
-st.markdown("---")
+                    st.pyplot(fig)
 
-st.markdown("## 📖 About This AI")
+# =========================================================
+# PAGE 2 : MODEL EXPLANATION
+# =========================================================
 
-st.write("""
+if page == "📚 AI Model Explanation":
 
-This project demonstrates how Artificial Intelligence can estimate age groups from facial images.
+    st.title("AI Model Development")
 
-Workflow
+    st.header("1. Data Preparation")
 
-1️⃣ Upload image  
-2️⃣ Detect face using MediaPipe  
-3️⃣ Extract facial features  
-4️⃣ Predict age group using CNN model  
-
-The model was trained using Transfer Learning with MobileNetV2.
-
+    st.write("""
+The dataset used in this project consists of thousands of labeled facial images.
+Preparation steps:
+• Collect dataset from public sources  
+• Remove corrupted or low-quality images  
+• Resize all images to 128x128 pixels  
+• Normalize pixel values (0-1)  
+• Split dataset into training and testing sets
 """)
 
-# ----------------------------
-# CREDIT
-# ----------------------------
+    st.header("2. Machine Learning")
 
-st.markdown("---")
+    st.write("""
+Machine Learning allows computers to learn patterns from data.
+In this project, the system learns relationships between facial features and human age.
+Important features include:
+• Facial structure  
+• Skin texture  
+• Wrinkles  
+• Face proportions
+""")
 
-st.markdown("""
+    st.header("3. Neural Network")
 
-### 👨‍💻 Project Creators
+    st.write("""
+The system uses a Convolutional Neural Network (CNN).
+CNN is designed for image processing.
+Main components:
+• Convolution Layer – extract image features  
+• Activation Layer – introduce non-linearity  
+• Pooling Layer – reduce feature size  
+• Fully Connected Layer – produce final prediction
+""")
 
-Achitphon Theanpo  6604062630561
-Jumponpat Sakekun  6604062630111
+    st.header("4. Model Development Process")
 
-### ☁️ Model Training
+    st.write("""
+Step 1 – Data Collection  
+Step 2 – Data Cleaning  
+Step 3 – Image Preprocessing  
+Step 4 – CNN Model Architecture Design  
+Step 5 – Model Training using TensorFlow  
+Step 6 – Model Evaluation and Accuracy Testing  
+Step 7 – Web Deployment using Streamlit
+""")
 
-Trained using Google Colab GPU
+    st.header("5. Data Sources")
 
-### 📂 Dataset
+    st.write("""
+• UTKFace Dataset  
+• Kaggle Face Age Dataset  
+""")
 
-Dataset from Kaggle Face Age Dataset
+    st.header("Project Creators")
 
+    st.write("""
+Achitphon Thaenpo – 6604062630561  
+Jumponpat Sakekun – 6604062630111
 """)
