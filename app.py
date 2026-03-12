@@ -226,34 +226,73 @@ cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 
 def preprocess_face(face):
 
+    # reduce noise
+    face = cv2.GaussianBlur(face,(3,3),0)
+
+    # improve contrast
+    lab = cv2.cvtColor(face, cv2.COLOR_BGR2LAB)
+    l,a,b = cv2.split(lab)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
+    cl = clahe.apply(l)
+
+    limg = cv2.merge((cl,a,b))
+    face = cv2.cvtColor(limg,cv2.COLOR_LAB2BGR)
+
+    # resize
     face = cv2.resize(face,(128,128))
 
+    # normalize
     face = face.astype("float32")/255.0
 
     face = np.reshape(face,(1,128,128,3))
 
     return face
 
+def refine_prediction(pred):
+
+    middle = pred[0]
+    old = pred[1]
+    young = pred[2]
+
+    # ลดการทายเด็กผิด
+    if young > 0.55 and middle > 0.30:
+        return 0
+
+    # ลดการทายวัยกลางคนผิด
+    if middle > 0.55 and young > 0.35:
+        return 2
+
+    return np.argmax(pred)
+
 # =====================================================
 # AGE ESTIMATION LOGIC (IMPROVED)
 # =====================================================
 
-def estimate_age(index,confidence):
+def estimate_age(index, confidence):
 
-    if index == 0:
-        base = 35
+    # Age ranges
+    if index == 2:  # Young
+        min_age = 3
+        max_age = 20
 
-    elif index == 1:
-        base = 65
+    elif index == 0:  # Middle
+        min_age = 21
+        max_age = 50
 
-    else:
-        base = 15
+    else:  # Old
+        min_age = 51
+        max_age = 85
 
-    noise = int((1-confidence/100)*12)
+    # confidence effect
+    spread = int((1 - confidence/100) * 15)
 
-    age = base + np.random.randint(-noise,noise+1)
+    min_age = max(1, min_age - spread)
+    max_age = max_age + spread
 
-    return max(age,1)
+    age = np.random.randint(min_age, max_age+1)
+
+    return age
 
 # =====================================================
 # SYSTEM INFO
@@ -353,15 +392,19 @@ if page == "🧠 Face Age Detector":
 
                 face = img[y:y+bh, x:x+bw]
 
+                # skip bad face crops
+                if face.shape[0] < 40 or face.shape[1] < 40:
+                    continue
+
                 face_input = preprocess_face(face)
 
-                prediction = model.predict(face_input,verbose=0)
+                prediction = model.predict(face_input, verbose=0)[0]
 
-                idx = np.argmax(prediction)
+                idx = refine_prediction(prediction)
 
                 predicted_class = classes[idx]
 
-                confidence = float(prediction[0][idx]) * 100
+                confidence = float(prediction[idx]) * 100
 
                 estimated_age = estimate_age(idx,confidence)
 
@@ -389,7 +432,7 @@ if page == "🧠 Face Age Detector":
 
                     fig = plt.figure()
 
-                    bars = plt.bar(classes,prediction[0])
+                    bars = plt.bar(classes, prediction)
 
                     for bar in bars:
                         bar.set_color("#00c6ff")
