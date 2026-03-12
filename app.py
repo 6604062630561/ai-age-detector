@@ -30,21 +30,59 @@ st.markdown("""
 background: linear-gradient(135deg,#141e30,#243b55);
 color:white;
 font-family:'Segoe UI';
+animation: fadeIn 1.2s ease;
 }
+
+/* FADE ANIMATION */
+
+@keyframes fadeIn{
+0%{opacity:0;}
+100%{opacity:1;}
+}
+
+/* TITLE */
 
 .big-title{
 font-size:64px;
 text-align:center;
 font-weight:800;
 text-shadow:0px 0px 30px rgba(0,200,255,0.8);
+animation: glow 2s ease-in-out infinite alternate;
 }
+
+/* TITLE GLOW */
+
+@keyframes glow{
+from{
+text-shadow:0 0 20px #00c6ff;
+}
+to{
+text-shadow:0 0 45px #00c6ff,0 0 60px #0072ff;
+}
+}
+
+/* SUBTITLE */
 
 .subtitle{
 text-align:center;
 font-size:22px;
 margin-bottom:25px;
 color:#d0e6ff;
+animation: slideDown 1s ease;
 }
+
+@keyframes slideDown{
+0%{
+opacity:0;
+transform:translateY(-20px);
+}
+100%{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+/* AGE BOX */
 
 .age-box{
 background: linear-gradient(135deg,#00c6ff,#0072ff);
@@ -52,19 +90,73 @@ padding:40px;
 border-radius:20px;
 text-align:center;
 box-shadow:0px 0px 30px rgba(0,200,255,0.7);
+animation: floatBox 3s ease-in-out infinite;
+transition: transform 0.3s;
 }
+
+/* HOVER EFFECT */
+
+.age-box:hover{
+transform:scale(1.05);
+}
+
+/* FLOAT */
+
+@keyframes floatBox{
+0%{transform:translateY(0px);}
+50%{transform:translateY(-10px);}
+100%{transform:translateY(0px);}
+}
+
+/* AGE NUMBER */
 
 .age-number{
 font-size:80px;
 font-weight:800;
+animation: pulse 2s infinite;
 }
+
+/* PULSE */
+
+@keyframes pulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.05);}
+100%{transform:scale(1);}
+}
+
+/* LABEL */
 
 .age-label{
 font-size:22px;
 }
 
-.metric-label{
-font-size:18px;
+/* SIDEBAR */
+
+section[data-testid="stSidebar"]{
+background:#0f172a;
+}
+
+/* BUTTON */
+
+.stButton>button{
+background:linear-gradient(90deg,#00c6ff,#0072ff);
+border:none;
+color:white;
+font-weight:600;
+border-radius:10px;
+padding:10px 20px;
+transition:0.3s;
+}
+
+.stButton>button:hover{
+transform:scale(1.05);
+box-shadow:0 0 20px #00c6ff;
+}
+
+/* PROGRESS BAR */
+
+.stProgress > div > div > div{
+background-image: linear-gradient(90deg,#00c6ff,#0072ff);
 }
 
 </style>
@@ -89,12 +181,15 @@ def load_ai():
 
     model = load_model("best_age_model.h5")
 
+    # warmup model (ลด lag ครั้งแรก)
+    dummy = np.zeros((1,128,128,3))
+    model.predict(dummy,verbose=0)
+
     return model
 
 
 with st.spinner("Loading AI Model..."):
     model = load_ai()
-
 
 # =====================================================
 # CLASS LABELS
@@ -106,7 +201,6 @@ classes = [
 "Young (0-20)"
 ]
 
-
 # =====================================================
 # MEDIAPIPE FACE DETECTOR
 # =====================================================
@@ -115,9 +209,8 @@ mp_face = mp.solutions.face_detection
 
 detector = mp_face.FaceDetection(
 model_selection=1,
-min_detection_confidence=0.6
+min_detection_confidence=0.65
 )
-
 
 # =====================================================
 # OPENCV FALLBACK DETECTOR
@@ -127,7 +220,6 @@ face_cascade = cv2.CascadeClassifier(
 cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-
 # =====================================================
 # IMAGE PREPROCESSING
 # =====================================================
@@ -136,30 +228,32 @@ def preprocess_face(face):
 
     face = cv2.resize(face,(128,128))
 
-    face = face / 255.0
+    face = face.astype("float32")/255.0
 
     face = np.reshape(face,(1,128,128,3))
 
     return face
 
-
 # =====================================================
-# AGE ESTIMATION LOGIC
+# AGE ESTIMATION LOGIC (IMPROVED)
 # =====================================================
 
-def estimate_age(index):
+def estimate_age(index,confidence):
 
     if index == 0:
-        age = np.random.randint(25,45)
+        base = 35
 
     elif index == 1:
-        age = np.random.randint(55,75)
+        base = 65
 
     else:
-        age = np.random.randint(8,20)
+        base = 15
 
-    return age
+    noise = int((1-confidence/100)*12)
 
+    age = base + np.random.randint(-noise,noise+1)
+
+    return max(age,1)
 
 # =====================================================
 # SYSTEM INFO
@@ -170,13 +264,9 @@ def show_system_info():
     st.sidebar.title("System Info")
 
     st.sidebar.write("Python:", platform.python_version())
-
     st.sidebar.write("TensorFlow:", tf.__version__)
-
     st.sidebar.write("Platform:", platform.system())
-
     st.sidebar.write("Processor:", platform.processor())
-
 
 show_system_info()
 
@@ -199,7 +289,8 @@ if page == "🧠 Face Age Detector":
 
         start_time = time.time()
 
-        image = Image.open(uploaded_file)
+        # FIX RGB ERROR
+        image = Image.open(uploaded_file).convert("RGB")
 
         img = np.array(image)
 
@@ -209,9 +300,9 @@ if page == "🧠 Face Age Detector":
 
         faces = []
 
-        if results.detections:
+        h,w,_ = img.shape
 
-            h,w,_ = img.shape
+        if results.detections:
 
             for detection in results.detections:
 
@@ -221,6 +312,15 @@ if page == "🧠 Face Age Detector":
                 y = int(bbox.ymin * h)
                 bw = int(bbox.width * w)
                 bh = int(bbox.height * h)
+
+                # FACE MARGIN (เพิ่มความแม่น)
+                margin = int(bw*0.2)
+
+                x = max(0,x-margin)
+                y = max(0,y-margin)
+
+                bw = min(w-x,bw+margin*2)
+                bh = min(h-y,bh+margin*2)
 
                 faces.append((x,y,bw,bh))
 
@@ -235,7 +335,6 @@ if page == "🧠 Face Age Detector":
             )
 
             for (x,y,wf,hf) in detected:
-
                 faces.append((x,y,wf,hf))
 
         if len(faces) == 0:
@@ -256,7 +355,7 @@ if page == "🧠 Face Age Detector":
 
                 face_input = preprocess_face(face)
 
-                prediction = model.predict(face_input, verbose=0)
+                prediction = model.predict(face_input,verbose=0)
 
                 idx = np.argmax(prediction)
 
@@ -264,11 +363,11 @@ if page == "🧠 Face Age Detector":
 
                 confidence = float(prediction[0][idx]) * 100
 
-                estimated_age = estimate_age(idx)
+                estimated_age = estimate_age(idx,confidence)
 
                 with col1:
 
-                    st.image(img,caption="Detected Face",use_column_width=True)
+                    st.image(img, caption="Detected Face", use_column_width=True)
 
                 with col2:
 
