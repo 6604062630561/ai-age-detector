@@ -53,11 +53,17 @@
 
 
 จัดทำโดย:
-นาย อชิตพล แทนโป 6604062630561
+นาย อชิตพล แทนโป 6604062630561<br>
 นาย จุมพลภัทร์ สาเกกูล 6604062630111
 
-Credit:
-Dataset : https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset#
+Credit:<br>
+Dataset : https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset#<br>
+: https://www.kaggle.com/datasets/dataturks/face-detection-in-images#<br>
+feature:<br>
+Input:
+Image → pixel values (numeric features จำนวนมาก)
+Output:
+Class → YOUNG / MIDDLE / OLD
 
 ---
 
