@@ -61,7 +61,7 @@ Dataset : https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset#<
 : https://www.kaggle.com/datasets/dataturks/face-detection-in-images#<br>
 feature:<br>
 Input:
-Image → pixel values (numeric features จำนวนมาก)
+Image → pixel values (numeric features จำนวนมาก)<br>
 Output:
 Class → YOUNG / MIDDLE / OLD
 
