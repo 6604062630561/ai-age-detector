@@ -14,7 +14,7 @@ import tensorflow as tf
 # =====================================================
 
 st.set_page_config(
-    page_title="AI Age Detector",
+    page_title="Age /MBTI Detector",
     page_icon="🧠",
     layout="wide"
 )
@@ -124,7 +124,7 @@ font-size:18px;
 
 page = st.radio(
 "",
-["🧠 Face Age Detector","📚 Model Explanation"],
+["🧠 Face Age Detector","📚 Face Neural Network","🧩 MBTI Predictor","📊 MBTI ML"],
 horizontal=True
 )
 
@@ -143,6 +143,31 @@ def load_ai():
     return model
 
 model = load_ai()
+@st.cache_resource
+def load_mbti():
+
+    import pickle
+
+    with open("vectorizer.pkl","rb") as f:
+        vectorizer = pickle.load(f)
+
+    with open("mbti_models.pkl","rb") as f:
+        models = pickle.load(f)
+
+    return vectorizer, models
+
+mbti_vectorizer, mbti_models = load_mbti()
+
+# =====================================================
+# TEXT PREPROCESS (MBTI)
+# =====================================================
+import re
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r"http\S+", "", text)
+    text = re.sub(r"[^a-zA-Z\s]", "", text)
+    return text
+
 
 # =====================================================
 # CLASS LABELS
@@ -380,7 +405,7 @@ if page == "🧠 Face Age Detector":
 # PAGE 2
 # =====================================================
 
-if page == "📚 Model Explanation":
+if page == "📚 Face Neural Network":
 
     st.title("AI Model Development")
 
@@ -455,3 +480,151 @@ Layers include:
 </div>
 
 """, unsafe_allow_html=True)
+
+if page == "🧩 MBTI Predictor":
+
+    st.markdown('<p class="big-title">MBTI PERSONALITY AI</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Predict Personality from Text</p>', unsafe_allow_html=True)
+
+    text = st.text_area("Enter your thoughts / posts", height=200)
+
+
+    def predict_mbti(text):
+
+        X = mbti_vectorizer.transform([clean_text(text)])
+
+        result = []
+        probs = []
+
+        for model in mbti_models:
+            prob = model.predict_proba(X)[0][1]
+            pred = 1 if prob > 0.5 else 0
+
+            result.append(pred)
+            probs.append(prob)
+
+        mbti = ""
+        mbti += "I" if result[0] else "E"
+        mbti += "N" if result[1] else "S"
+        mbti += "T" if result[2] else "F"
+        mbti += "J" if result[3] else "P"
+
+        return mbti, probs
+
+    if st.button("Analyze Personality"):
+
+        if text.strip() == "":
+            st.warning("Please enter text")
+        else:
+
+            mbti, probs = predict_mbti(text)
+
+            st.markdown(f"""
+            <div class="age-box">
+            <div>Your MBTI</div>
+            <div class="age-number">{mbti}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("### Trait Probability")
+
+            labels = ["I vs E","N vs S","T vs F","J vs P"]
+
+            fig, ax = plt.subplots()
+            ax.bar(labels, probs)
+            ax.set_ylim(0,1)
+
+            for i,v in enumerate(probs):
+                ax.text(i,v+0.02,f"{v:.2f}",ha="center")
+
+            st.pyplot(fig)
+
+
+if page == "📊 MBTI ML":
+
+    st.title("MBTI Model Explanation")
+
+    st.header("Dataset")
+
+    st.write("""
+The dataset contains text posts labeled with MBTI personality types.
+
+Each sample includes:
+
+• Personality type (16 classes)  
+• Multiple text posts combined  
+
+Example:
+
+"I enjoy deep thinking and abstract ideas"
+""")
+
+    st.header("Preprocessing")
+
+    st.write("""
+Text data is cleaned before training:
+
+• Lowercase conversion  
+• Remove URLs  
+• Remove special characters  
+• Tokenization  
+""")
+
+    st.header("Feature Extraction")
+
+    st.write("""
+TF-IDF (Term Frequency - Inverse Document Frequency) is used.
+
+It converts text into numerical vectors based on word importance.
+
+Key idea:
+
+• Important words → higher weight  
+• Common words → lower weight  
+""")
+
+    st.header("Machine Learning Model")
+
+    st.write("""
+The system uses Logistic Regression classifiers.
+
+Instead of predicting 16 classes directly, it splits into 4 binary tasks:
+
+• I vs E  
+• N vs S  
+• T vs F  
+• J vs P  
+
+Each model learns patterns independently.
+""")
+
+    st.header("Prediction Process")
+
+    st.write("""
+1 Input text  
+2 Convert to TF-IDF vector  
+3 Predict probability for each trait  
+4 Combine results into MBTI type  
+
+Example:
+
+Text → [0.8, 0.7, 0.6, 0.9]  
+Result → INTJ
+""")
+
+    st.header("Model Strength")
+
+    st.write("""
+• Fast prediction  
+• Lightweight model  
+• Easy deployment (pickle format)  
+• Works well with text data  
+""")
+
+    st.header("Limitations")
+
+    st.write("""
+• Depends heavily on text quality  
+• MBTI is not 100% scientifically accurate  
+• Context understanding is limited compared to deep learning  
+""")
