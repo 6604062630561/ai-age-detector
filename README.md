@@ -3,7 +3,7 @@
 - 🔹 คาดเดาอายุจากใบหน้า (Face Age Detection)  
 - 🔹 วิเคราะห์บุคลิกภาพ MBTI จากข้อความ (Personality Prediction)  
 
-พัฒนาโดยใช้ **Deep Learning + Machine Learning** และแสดงผลผ่านเว็บแอปพลิเคชัน
+พัฒนาโดยใช้ **Neural Network(Deep Learning) + Machine Learning** และแสดงผลผ่านเว็บแอปพลิเคชัน
 
 ---
 
@@ -149,7 +149,6 @@ https://www.kaggle.com/datasets/datasnaek/mbti-type
 
 ---
 
-# 🚀 วิธีใช้งาน
 
 ## 1️⃣ Clone โปรเจค
 
