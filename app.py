@@ -298,6 +298,8 @@ if page == "🧠 Face Age Detector":
                     continue
 
                 face = img[y1:y2, x1:x2]
+
+                # ตรวจสอบว่า face ไม่ว่าง
                 if face.size == 0:
                     st.warning(f"Face {i+1} empty after crop, skipping")
                     continue
@@ -313,27 +315,44 @@ if page == "🧠 Face Age Detector":
 
                 # smoothing prediction
                 prediction = (p1 + p2 + p3 + p4 + p5 + p1) / 6
-                probability_data.append(prediction)  # สำหรับกราฟ
 
-                # estimated age
+                # คำนวณ estimated age
                 estimated_age = estimate_age(prediction)
 
-                # เลือก Group และ Confidence จาก max probability
-                idx = np.argmax(prediction)
-                classes = ["Middle Age (21-50)","Old (51+)","Young (0-20)"]
-                predicted_class = classes[idx]
-                confidence = prediction[idx] * 100
+                # probability ของแต่ละกลุ่ม
+                middle_prob = float(prediction[0])
+                old_prob = float(prediction[1])
+                young_prob = float(prediction[2])
+
+                # กำหนด Group ตาม estimated_age
+                if 0 <= estimated_age <= 20:
+                    predicted_class = "Young (0-20)"
+                elif 21 <= estimated_age <= 50:
+                    predicted_class = "Middle Age (21-50)"
+                else:
+                    predicted_class = "Old (51+)"
+
+                # confidence = probability ของกลุ่มที่เลือก
+                if predicted_class == "Young (0-20)":
+                    confidence = young_prob * 100
+                elif predicted_class == "Middle Age (21-50)":
+                    confidence = middle_prob * 100
+                else:
+                    confidence = old_prob * 100
 
                 results_list.append({
                     "Face": i+1,
                     "Age": estimated_age,
                     "Group": predicted_class,
-                    "Confidence": round(confidence, 2)
+                    "Confidence": round(confidence,2)
                 })
 
                 label = f"Face {i+1} | {estimated_age} yrs"
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 3)
                 cv2.putText(img, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+
+                # เก็บ probability จริงทั้งหมด สำหรับกราฟ
+                probability_data.append([middle_prob, old_prob, young_prob])
 
             # แสดงผล
             col1, col2 = st.columns(2)
@@ -342,7 +361,6 @@ if page == "🧠 Face Age Detector":
             with col2:
                 st.markdown("### Face Results")
                 st.table(results_list)
-
                 st.markdown("### Estimated Age")
                 cols = st.columns(len(results_list))
                 for i, face in enumerate(results_list):
