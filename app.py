@@ -8,6 +8,7 @@ import mediapipe as mp
 import time
 import platform
 import tensorflow as tf
+import itertools
 
 # =====================================================
 # PAGE CONFIG
@@ -146,13 +147,10 @@ model = load_ai()
 @st.cache_resource
 def load_mbti():
 
-    import pickle
+    import joblib
 
-    with open("vectorizer.pkl","rb") as f:
-        vectorizer = pickle.load(f)
-
-    with open("mbti_models.pkl","rb") as f:
-        models = pickle.load(f)
+    vectorizer = joblib.load("vectorizer.pkl")
+    models = joblib.load("mbti_models.pkl")
 
     return vectorizer, models
 
@@ -488,28 +486,38 @@ if page == "🧩 MBTI Predictor":
 
     text = st.text_area("Enter your thoughts / posts", height=200)
 
-
-    def predict_mbti(text):
-
+    def predict_mbti_topk(text, k=5):
         X = mbti_vectorizer.transform([clean_text(text)])
+        probs = [model.predict_proba(X)[0][1] for model in mbti_models]
 
-        result = []
-        probs = []
+        # trait options
+        trait_pairs = [
+            ("I","E"),
+            ("N","S"),
+            ("T","F"),
+            ("J","P")
+        ]
 
-        for model in mbti_models:
-            prob = model.predict_proba(X)[0][1]
-            pred = 1 if prob > 0.5 else 0
+        # probability สำหรับ trait ฝั่งแรก
+        trait_probs = [
+            [p, 1-p] for p in probs
+        ]
 
-            result.append(pred)
-            probs.append(prob)
+        # สร้าง MBTI ทั้ง 16 แบบ
+        all_mbti = list(itertools.product(*trait_pairs))
 
-        mbti = ""
-        mbti += "I" if result[0] else "E"
-        mbti += "N" if result[1] else "S"
-        mbti += "T" if result[2] else "F"
-        mbti += "J" if result[3] else "P"
+        mbti_scores = []
+        for mbti in all_mbti:
+            score = 1.0
+            for i, t in enumerate(mbti):
+                idx = 0 if t == trait_pairs[i][0] else 1
+                score *= trait_probs[i][idx]
+            mbti_scores.append(("".join(mbti), score))
 
-        return mbti, probs
+        # เรียงและเลือก Top-k
+        top_mbti = sorted(mbti_scores, key=lambda x: x[1], reverse=True)[:k]
+
+        return top_mbti, probs
 
     if st.button("Analyze Personality"):
 
@@ -517,28 +525,42 @@ if page == "🧩 MBTI Predictor":
             st.warning("Please enter text")
         else:
 
-            mbti, probs = predict_mbti(text)
+            top5, probs = predict_mbti_topk(text)
 
+            # แสดง MBTI อันดับ 1
             st.markdown(f"""
             <div class="age-box">
             <div>Your MBTI</div>
-            <div class="age-number">{mbti}</div>
+            <div class="age-number">{top5[0][0]}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("### Trait Probability")
+            # แสดง Top-5 MBTI
+            st.markdown("### Top 5 MBTI Predictions")
+            for mbti, score in top5:
+                st.write(f"{mbti} → {score:.2%}")
+
+            # แสดง probability ของแต่ละ trait
+            st.markdown("### Trait Probabilities")
 
             labels = ["I vs E","N vs S","T vs F","J vs P"]
+            left_probs = [p if p > 0.5 else 1-p for p in probs]
+            right_probs = [1-p for p in left_probs]
 
-            fig, ax = plt.subplots()
-            ax.bar(labels, probs)
-            ax.set_ylim(0,1)
+            # horizontal stacked bar
+            fig, ax = plt.subplots(figsize=(7,3))
+            ax.barh(labels, left_probs, color="#4CAF50", label="Dominant Trait")
+            ax.barh(labels, right_probs, left=left_probs, color="#FFC107", label="Opposite Trait")
 
-            for i,v in enumerate(probs):
-                ax.text(i,v+0.02,f"{v:.2f}",ha="center")
+            for i,(l,r) in enumerate(zip(left_probs,right_probs)):
+                ax.text(l/2, i, f"{l:.0%}", va='center', ha='center', color='white', fontweight='bold')
+                ax.text(l+r/2, i, f"{r:.0%}", va='center', ha='center', color='black', fontweight='bold')
 
+            ax.set_xlim(0,1)
+            ax.set_xlabel("Probability")
+            ax.legend(loc="lower right")
+            ax.invert_yaxis()  # ให้ trait อยู่ top-down
             st.pyplot(fig)
-
 
 if page == "📊 MBTI ML":
 
