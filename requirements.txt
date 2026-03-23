@@ -1,8 +1,9 @@
 streamlit
-tensorflow
-opencv-python
-mediapipe==0.10.9
-protobuf==3.20.3
-pillow
 numpy
+opencv-python-headless
 matplotlib
+tensorflow-cpu
+scikit-learn
+joblib
+pillow
+mediapipe
