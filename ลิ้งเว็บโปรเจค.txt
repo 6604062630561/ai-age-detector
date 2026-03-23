@@ -1,2 +1,5 @@
 http://10.72.26.190:8501/
-***กรณีเปิดแล้วเว็บไม่ขึ้น https://huggingface.co/spaces/Indolent11/Project ***
+*** กรณีเปิดลิงค์ด้านบนแล้วเว็บไม่ขึ้น ใช้ลิงค์นี้แทน
+https://huggingface.co/spaces/Indolent11/Project 
+(ถ้าเว็บ huggingface ยังไม่ขึ้นให้กด Restart ครับ)
+***
