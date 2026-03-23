@@ -1,36 +1,68 @@
-# 🧠 IS Project AI Age Detector
-ระบบปัญญาประดิษฐ์สำหรับคาดเดาช่วงอายุของบุคคลจากภาพใบหน้า  
-พัฒนาโดยใช้เทคนิค Deep Learning และแสดงผลผ่านเว็บแอปพลิเคชัน
+# 🧠 IS Project: AI Age & MBTI Detector  
+ระบบปัญญาประดิษฐ์สำหรับ  
+- 🔹 คาดเดาอายุจากใบหน้า (Face Age Detection)  
+- 🔹 วิเคราะห์บุคลิกภาพ MBTI จากข้อความ (Personality Prediction)  
+
+พัฒนาโดยใช้ **Deep Learning + Machine Learning** และแสดงผลผ่านเว็บแอปพลิเคชัน
 
 ---
 
 # 📌 หลักการทำงานของระบบ
 
-ระบบนี้ใช้ **Deep Learning (Convolutional Neural Network)** ในการวิเคราะห์ภาพใบหน้า  
-เพื่อคาดเดาช่วงอายุของบุคคลจากลักษณะของใบหน้า
+## 🧠 1. Face Age Detection (Deep Learning)
 
-ขั้นตอนการทำงานของระบบมีดังนี้
+ระบบใช้ **Convolutional Neural Network (CNN)** วิเคราะห์ภาพใบหน้า
 
-1️⃣ ผู้ใช้ทำการอัปโหลดภาพใบหน้าเข้าสู่ระบบ  
+### ขั้นตอน:
+1️⃣ ผู้ใช้อัปโหลดภาพใบหน้า  
+2️⃣ ระบบใช้ **Face Detection (MediaPipe)** ตรวจจับใบหน้า  
+3️⃣ ทำการ **Crop + Resize + Normalize**  
+4️⃣ โมเดล CNN ทำการ **Predict ช่วงอายุ**  
+5️⃣ แสดงผล:
 
-2️⃣ ระบบจะใช้ **Face Detection** เพื่อตรวจจับตำแหน่งของใบหน้าในภาพ  
+- ช่วงอายุ (Age Group)  
+- อายุโดยประมาณ (Estimated Age)  
+- ความมั่นใจ (Confidence)  
+- กราฟ Probability  
 
-3️⃣ ระบบจะทำการ **Crop และปรับขนาดภาพใบหน้า** ให้เหมาะสมสำหรับโมเดล AI  
+---
 
-4️⃣ โมเดล Deep Learning ที่ผ่านการฝึกแล้วจะทำการ **Predict ช่วงอายุ**
+## 🧩 2. MBTI Personality Prediction (Machine Learning)
 
-5️⃣ ระบบจะแสดงผลลัพธ์ดังนี้
+ระบบใช้ **Natural Language Processing (NLP)** วิเคราะห์ข้อความ
 
-- ช่วงอายุ (Age Group)
-- อายุโดยประมาณ (Estimated Age)
-- ความมั่นใจของโมเดล (Confidence)
-- กราฟความน่าจะเป็นของแต่ละช่วงอายุ
+### ขั้นตอน:
+1️⃣ ผู้ใช้ป้อนข้อความ (เช่น ความคิดเห็น / โพสต์)  
+2️⃣ ระบบทำ **Text Cleaning**
+- lowercase  
+- remove URL  
+- remove special characters  
+
+3️⃣ แปลงข้อความเป็นตัวเลขด้วย **TF-IDF**  
+4️⃣ ใช้ **Logistic Regression (4 models)** ทำนาย  
+5️⃣ รวมผลเป็น MBTI
+
+---
+
+# 🎯 MBTI ที่ระบบทำนาย
+
+ระบบแบ่งเป็น 4 แกน (Binary Classification)
+
+| Dimension | Meaning |
+|----------|--------|
+| I / E | Introvert / Extrovert |
+| N / S | Intuition / Sensing |
+| T / F | Thinking / Feeling |
+| J / P | Judging / Perceiving |
+
+👉 รวมกันเป็น 16 Personality Types เช่น  
+- INTJ  
+- ENFP  
+- ISTP  
 
 ---
 
 # 🎯 ช่วงอายุที่ระบบสามารถทำนายได้
-
-ระบบแบ่งช่วงอายุออกเป็น 3 กลุ่ม
 
 | ช่วงอายุ | คำอธิบาย |
 |--------|--------|
@@ -42,34 +74,85 @@
 
 # 🧠 เทคโนโลยีที่ใช้
 
-โปรเจคนี้พัฒนาด้วยเทคโนโลยีดังต่อไปนี้
+## 🔹 Deep Learning
+- TensorFlow / Keras  
+- CNN (Image Classification)
 
-- Python
-- TensorFlow / Keras
-- OpenCV
-- MediaPipe (Face Detection)
-- Streamlit (Web Application)
-- Matplotlib (Visualization)
+## 🔹 Machine Learning
+- Scikit-learn  
+- Logistic Regression  
+- TF-IDF Vectorizer  
 
+## 🔹 Computer Vision
+- OpenCV  
+- MediaPipe  
 
-จัดทำโดย:
-นาย อชิตพล แทนโป 6604062630561<br>
-นาย จุมพลภัทร์ สาเกกูล 6604062630111
+## 🔹 Web Application
+- Streamlit  
 
-Credit:<br>
-Dataset : https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset#<br>
-: https://www.kaggle.com/datasets/dataturks/face-detection-in-images#<br>
-feature:<br>
-Input:
-Image → pixel values (numeric features จำนวนมาก)<br>
-Output:
-Class → YOUNG / MIDDLE / OLD
+## 🔹 Visualization
+- Matplotlib  
 
 ---
 
+# ⚙️ Feature ของระบบ
 
-## 1️⃣ Clone โปรเจคจาก GitHub
+## 🔹 Input
+- ภาพใบหน้า (Image)
+- ข้อความ (Text)
+
+## 🔹 Output
+
+### Face Age:
+- Age Group  
+- Estimated Age  
+- Confidence  
+- Probability Graph  
+
+### MBTI:
+- Personality Type (เช่น INTJ)  
+- Probability ของแต่ละแกน  
+- กราฟแสดงผล  
+
+---
+
+# 📊 โครงสร้างโมเดล
+
+## 🔹 Age Model (CNN)
+- Input: Image (128x128x3)  
+- Output: 3 classes (Young, Middle, Old)  
+
+## 🔹 MBTI Model (ML)
+- Input: Text → TF-IDF Vector  
+- Model: Logistic Regression (4 ตัว)  
+- Output: I/E, N/S, T/F, J/P  
+
+---
+
+# 👨‍💻 จัดทำโดย
+
+- นาย อชิตพล แทนโป 6604062630561  
+- นาย จุมพลภัทร์ สาเกกูล 6604062630111  
+
+---
+
+# 📚 Credit
+
+Dataset:
+
+- Age Detection  
+https://www.kaggle.com/datasets/arashnic/faces-age-detection-dataset  
+https://www.kaggle.com/datasets/dataturks/face-detection-in-images  
+
+- MBTI Dataset  
+https://www.kaggle.com/datasets/datasnaek/mbti-type  
+
+---
+
+# 🚀 วิธีใช้งาน
+
+## 1️⃣ Clone โปรเจค
 
 ```bash
 git clone https://github.com/6604062630561/ai-age-detector.git
-
+cd ai-age-detector
