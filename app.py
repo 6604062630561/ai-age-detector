@@ -228,9 +228,9 @@ def estimate_age(pred):
     old = pred[1]
 
     age = (
-    young * 8 +
-    middle * 32 +
-    old * 65
+    young * 7 +
+    middle * 31 +
+    old * 68
     )
 
     return int(age)
@@ -269,108 +269,84 @@ if page == "🧠 Face Age Detector":
         results = detector.process(img_rgb)
 
         faces = []
-        h,w,_ = img.shape
+        h, w, _ = img.shape
 
         if results.detections:
-
             for detection in results.detections:
-
                 bbox = detection.location_data.relative_bounding_box
-
                 x = int(bbox.xmin * w)
                 y = int(bbox.ymin * h)
                 bw = int(bbox.width * w)
                 bh = int(bbox.height * h)
+                faces.append((x, y, bw, bh))
 
-                faces.append((x,y,bw,bh))
-
-        if len(faces)==0:
-
+        if len(faces) == 0:
             st.warning("No face detected")
-
         else:
-
             results_list = []
             probability_data = []
 
-            for i,(x,y,bw,bh) in enumerate(faces):
+            for i, (x, y, bw, bh) in enumerate(faces):
+                # ตรวจสอบ bbox ให้อยู่ในขอบภาพ
+                x1 = max(0, x)
+                y1 = max(0, y)
+                x2 = min(w, x + bw)
+                y2 = min(h, y + bh)
 
-                face = img[y:y+bh, x:x+bw]
+                if x2 <= x1 or y2 <= y1:
+                    st.warning(f"Face {i+1} bounding box invalid, skipping")
+                    continue
+
+                face = img[y1:y2, x1:x2]
+                if face.size == 0:
+                    st.warning(f"Face {i+1} empty after crop, skipping")
+                    continue
 
                 face_input = preprocess_face(face)
 
-                p1 = model.predict(face_input,verbose=0)[0]
+                # Augmentation predictions
+                p1 = model.predict(face_input, verbose=0)[0]
+                p2 = model.predict(np.expand_dims(cv2.flip(face_input[0],1),0), verbose=0)[0]
+                p3 = model.predict(np.clip(face_input*1.2,0,1), verbose=0)[0]
+                p4 = model.predict(np.clip(face_input*0.8,0,1), verbose=0)[0]
+                p5 = model.predict(np.expand_dims(cv2.GaussianBlur(face_input[0], (3,3),0),0), verbose=0)[0]
 
-                flip = np.expand_dims(cv2.flip(face_input[0],1),0)
-                p2 = model.predict(flip,verbose=0)[0]
-
-                bright = np.clip(face_input*1.2,0,1)
-                p3 = model.predict(bright,verbose=0)[0]
-
-                dark = np.clip(face_input*0.8,0,1)
-                p4 = model.predict(dark,verbose=0)[0]
-
-                blur = np.expand_dims(cv2.GaussianBlur(face_input[0],(3,3),0),0)
-                p5 = model.predict(blur,verbose=0)[0]
-
-                # FIX: smoothing ใหม่
+                # smoothing prediction
                 prediction = (p1 + p2 + p3 + p4 + p5 + p1) / 6
+                probability_data.append(prediction)  # สำหรับกราฟ
 
-                probability_data.append(prediction)
-
-                # FIX: bias correction
-                if prediction[2] > 0.65:
-                    idx = 2
-                elif prediction[1] > 0.70:
-                    idx = 1
-                else:
-                    idx = np.argmax(prediction)
-
-                predicted_class = classes[idx]
-
-                confidence = float(prediction[idx]) * 100
-
+                # estimated age
                 estimated_age = estimate_age(prediction)
+
+                # เลือก Group และ Confidence จาก max probability
+                idx = np.argmax(prediction)
+                classes = ["Middle Age (21-50)","Old (51+)","Young (0-20)"]
+                predicted_class = classes[idx]
+                confidence = prediction[idx] * 100
 
                 results_list.append({
                     "Face": i+1,
                     "Age": estimated_age,
                     "Group": predicted_class,
-                    "Confidence": round(confidence,2)
+                    "Confidence": round(confidence, 2)
                 })
 
                 label = f"Face {i+1} | {estimated_age} yrs"
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 3)
+                cv2.putText(img, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
 
-                cv2.rectangle(img,(x,y),(x+bw,y+bh),(0,255,0),3)
-
-                cv2.putText(
-                    img,
-                    label,
-                    (x,y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0,255,0),
-                    2
-                )
-
-            col1,col2 = st.columns(2)
-
+            # แสดงผล
+            col1, col2 = st.columns(2)
             with col1:
                 st.image(img, caption="Detected Faces", use_column_width=True)
-
             with col2:
-
                 st.markdown("### Face Results")
                 st.table(results_list)
 
                 st.markdown("### Estimated Age")
-
                 cols = st.columns(len(results_list))
-
                 for i, face in enumerate(results_list):
-
                     with cols[i]:
-
                         st.markdown(f"""
                         <div class="age-box">
                         <div>Face {face['Face']}</div>
@@ -379,25 +355,17 @@ if page == "🧠 Face Age Detector":
                         """, unsafe_allow_html=True)
 
                 st.markdown("### Age Prediction Probability")
-
                 labels = ["Middle Age","Old","Young"]
-
                 for i, prob in enumerate(probability_data):
-
                     fig, ax = plt.subplots()
-
                     ax.bar(labels, prob)
-
                     ax.set_ylim(0,1)
-
-                    for j,v in enumerate(prob):
-                        ax.text(j,v+0.02,f"{v:.2f}",ha="center")
-
+                    for j, v in enumerate(prob):
+                        ax.text(j, v+0.02, f"{v:.2f}", ha="center")
                     st.pyplot(fig)
 
         end_time = time.time()
-
-        st.write("Processing Time:", round(end_time-start_time,2),"seconds")
+        st.write("Processing Time:", round(end_time-start_time, 2), "seconds")
 
 # =====================================================
 # PAGE 2
